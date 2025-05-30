@@ -1,0 +1,22 @@
+$fichier = "C:\chemin\vers\employes.txt"
+
+Get-Content -Path $fichier | ForEach-Object {
+    $ville, $equipe, $nom, $prenom = $_ -split ';'
+
+    $domaine = if ($ville -eq "Geneve") { "geneva.cyna.fr" } 
+               elseif ($ville -eq "Paris") { "paris.cyna.fr" } 
+               else { "inconnu.cyna.fr" }
+
+    $nomUtilisateur = "$($prenom.Substring(0,1))$nom"
+    $adresseEmail = "$nomUtilisateur@$domaine"
+
+    $cheminDepartement = "OU=$equipe,OU=Departments,DC=cyna,DC=fr"
+    New-ADOrganizationalUnit -Name $equipe -Path "OU=Departments,DC=cyna,DC=fr" -ErrorAction SilentlyContinue
+
+    $utilisateur = New-ADUser -Name "$prenom $nom" -GivenName $prenom -Surname $nom -SamAccountName $nomUtilisateur 
+        -EmailAddress $adresseEmail -Path $cheminDepartement 
+        -HomeDirectory "\\serveur\utilisateurs\$equipe\$nomUtilisateur" 
+        -HomeDrive "H:" -Enabled $true 
+        -AccountPassword (ConvertTo-SecureString -AsPlainText "" -Force) 
+        -PasswordNeverExpires $false 
+        -ChangePasswordAtLogon $true 
