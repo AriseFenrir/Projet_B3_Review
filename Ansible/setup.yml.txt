@@ -1,0 +1,72 @@
+---
+- name: Déploiement basique AD DS + Node Exporter
+  hosts: adds_servers
+  become: true
+
+  vars:
+    node_exporter_version: "1.5.0"
+    node_exporter_user: "node_exporter"
+
+  tasks:
+
+    - name: Mettre à jour les paquets système
+      apt:
+        update_cache: yes
+        upgrade: dist
+
+    - name: Installer les paquets nécessaires (samba, krb5, etc.)
+      apt:
+        name:
+          - samba
+          - krb5-user
+          - winbind
+          - dnsutils
+          - acl
+        state: present
+
+    - name: Créer un utilisateur dédié pour node_exporter
+      user:
+        name: "{{ node_exporter_user }}"
+        shell: /usr/sbin/nologin
+
+    - name: Télécharger Node Exporter
+      get_url:
+        url: "https://github.com/prometheus/node_exporter/releases/download/v{{ node_exporter_version }}/node_exporter-{{ node_exporter_version }}.linux-amd64.tar.gz"
+        dest: /tmp/node_exporter.tar.gz
+        mode: '0644'
+
+    - name: Extraire Node Exporter
+      unarchive:
+        src: /tmp/node_exporter.tar.gz
+        dest: /usr/local/bin/
+        remote_src: yes
+        creates: "/usr/local/bin/node_exporter-{{ node_exporter_version }}.linux-amd64"
+
+    - name: Copier le binaire node_exporter dans /usr/local/bin
+      copy:
+        remote_src: yes
+        src: "/usr/local/bin/node_exporter-{{ node_exporter_version }}.linux-amd64/node_exporter"
+        dest: /usr/local/bin/node_exporter
+        mode: '0755'
+
+    - name: Créer un service systemd pour Node Exporter
+      copy:
+        dest: /etc/systemd/system/node_exporter.service
+        content: |
+          [Unit]
+          Description=Node Exporter
+          Wants=network-online.target
+          After=network-online.target
+
+          [Service]
+          User={{ node_exporter_user }}
+          ExecStart=/usr/local/bin/node_exporter
+
+          [Install]
+          WantedBy=default.target
+
+    - name: Démarrer et activer node_exporter
+      systemd:
+        name: node_exporter
+        enabled: yes
+        state: started

@@ -1,0 +1,12 @@
+# LA COMMANDE CI-DESSOUS EFFECTUE LES OPÉRATIONS SUIVANTES :
+# Définir le groupe de ressources <resource-group-name> que l'instance utilisera.
+# Définir le nom de l'instance (my-vm).
+# Définir Ubuntu comme image.
+# Définir le nom d'utilisateur administrateur.
+# Générer les clés que vous pouvez utiliser pour vous connecter à l'instance.
+az vm create \
+  --resource-group <resource-group-name> \
+  --name my-vm \
+  --image UbuntuLTS \
+  --admin-username azureuser \
+  --generate-ssh-keys

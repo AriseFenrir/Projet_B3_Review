@@ -1,0 +1,33 @@
+# Variables
+$ExportFolder = "C:\ExportsPST"
+$UserName = $env:USERNAME
+$DateStamp = Get-Date -Format "yyyyMMdd_HHmm"
+$PSTFile = "$ExportFolder\$UserName-OutlookBackup-$DateStamp.pst"
+
+if (!(Test-Path -Path $ExportFolder)) {
+    New-Item -ItemType Directory -Path $ExportFolder
+}
+
+Write-Host "Lancement d'Outlook..." -ForegroundColor Cyan
+$outlook = New-Object -ComObject Outlook.Application
+$namespace = $outlook.GetNamespace("MAPI")
+
+Write-Host "Exportation des données Outlook pour l'utilisateur $UserName..." -ForegroundColor Yellow
+$namespace.AddStore($PSTFile)
+
+$pstFolder = $namespace.Folders | Where-Object { $_.FilePath -eq $PSTFile }
+
+$FoldersToCopy = @("Inbox", "Sent Items", "Calendar", "Contacts", "Drafts")
+
+foreach ($folderName in $FoldersToCopy) {
+    $sourceFolder = $namespace.GetDefaultFolder([Microsoft.Office.Interop.Outlook.OlDefaultFolders]::$folderName)
+    if ($sourceFolder -ne $null) {
+        $targetFolder = $pstFolder.Folders.Add($folderName)
+        foreach ($item in $sourceFolder.Items) {
+            $item.CopyTo($targetFolder)
+        }
+        Write-Host "$folderName exporté."
+    }
+}
+
+$namespace.RemoveStore($pstFolder)
